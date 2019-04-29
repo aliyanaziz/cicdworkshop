@@ -1,1 +1,1 @@
-# Node "Hello World" Example.
+CICD Workshop
