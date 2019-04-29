@@ -1,0 +1,37 @@
+  
+pipeline:
+    web_build_image:
+      image: docker:17.07.0-ce
+      environment:
+        - DOCKER_HOST=tcp://172.17.0.1:2375
+      commands:
+        - docker build -t cicdworkshop:$${DRONE_COMMIT_SHA} .
+      when:
+        event: [push, tag]
+    web_latest_image_to_quay:
+      image: docker:17.07.0-ce
+      secrets:
+        - docker_password
+      environment:
+        - DOCKER_HOST=tcp://172.17.0.1:2375
+      commands:
+        - echo(docker login -u="aliyanaziz" -p=$${DOCKER_PASSWORD} quay.io)
+        - docker login -u="aliyanaziz" -p=$${DOCKER_PASSWORD} quay.io
+        - docker tag cicdworkshop:$${DRONE_COMMIT_SHA} quay.io/cicd/cicdworkshop:$${DRONE_COMMIT_SHA}
+        - docker tag cicdworkshop:$${DRONE_COMMIT_SHA} quay.io/cicd/cicdworkshop:latest
+        - docker push quay.io/cicd/cicdworkshop:$${DRONE_COMMIT_SHA}
+        - docker push quay.io/cicd/cicdworkshop:latest
+      when:
+        event: push
+        branch: master
+    deploy_to_dev:
+      image: quay.io/cicd/kd:v0.3.1
+      secrets:
+        - kube_server_acp_notprod
+        - kube_token_acp_notprod
+        - my_secret
+      commands:
+        - ./deploy.sh
+      when:
+        event: [deployment, push]
+        branch: master
